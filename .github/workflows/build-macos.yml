@@ -1,1 +1,59 @@
-.github/workflows/build-macos.yml
+name: Build macOS App + DMG
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install Tesseract
+        run: brew install tesseract
+
+      - name: Install create-dmg
+        run: brew install create-dmg
+
+      - name: Build .app using py2app
+        run: python setup.py py2app
+
+      - name: Zip the .app
+        run: |
+          cd dist
+          zip -r LocAnhChinh.zip Locanhchinh123_app.app
+
+      - name: Create .dmg from .app
+        run: |
+          create-dmg \
+            --volname "LocAnhChinh" \
+            --window-pos 200 120 \
+            --window-size 600 300 \
+            --icon-size 100 \
+            --icon "Locanhchinh123_app.app" 100 100 \
+            --app-drop-link 400 100 \
+            "../LocAnhChinh.dmg" \
+            "dist/"
+
+      - name: Upload both .zip and .dmg to GitHub Releases
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            dist/LocAnhChinh.zip
+            LocAnhChinh.dmg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
